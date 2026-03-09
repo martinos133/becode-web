@@ -13,6 +13,8 @@
   --becode-link-hover: #fb923c;
   --becode-error-bg: rgba(239, 68, 68, 0.15);
   --becode-error-text: #fca5a5;
+  --becode-danger: #dc2626;
+  --becode-danger-hover: #b91c1c;
   --becode-input-bg: #171717;
   --becode-radius: 8px;
   --becode-radius-lg: 12px;

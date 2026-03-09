@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 type EmployeeRow = {
   id: number;
@@ -14,21 +15,25 @@ type EmployeeRow = {
 
 const inputStyle = {
   width: '100%',
-  padding: '0.5rem 0.75rem',
+  padding: '0.55rem 0.8rem',
   background: 'var(--becode-input-bg)',
   borderRadius: 'var(--becode-radius)',
   border: '1px solid var(--becode-border)',
   color: 'var(--becode-text)',
   fontSize: '0.9rem',
   outline: 'none',
+  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
 } as const;
 
 export default function EmployeesPage() {
   const [rows, setRows] = useState<EmployeeRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [savingNew, setSavingNew] = useState(false);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingSnapshot, setEditingSnapshot] = useState<EmployeeRow | null>(null);
   const [newError, setNewError] = useState<React.ReactNode | null>(null);
   const [newEmp, setNewEmp] = useState({
     first_name: '',
@@ -129,6 +134,21 @@ export default function EmployeesPage() {
     );
   }
 
+  function startEditing(row: EmployeeRow) {
+    setEditingId(row.id);
+    setEditingSnapshot({ ...row });
+  }
+
+  function cancelEditing() {
+    if (editingId !== null && editingSnapshot !== null) {
+      setRows((prev) =>
+        prev.map((r) => (r.id === editingId ? { ...editingSnapshot } : r))
+      );
+    }
+    setEditingId(null);
+    setEditingSnapshot(null);
+  }
+
   async function saveRow(row: EmployeeRow) {
     setSavingId(row.id);
     const supabase = createClient();
@@ -141,6 +161,8 @@ export default function EmployeesPage() {
       hourly_rate: row.hourly_rate,
     });
     setSavingId(null);
+    setEditingId(null);
+    setEditingSnapshot(null);
     if (error) console.error('Chyba pri ukladaní:', error.message);
     else void loadEmployees();
   }
@@ -150,18 +172,24 @@ export default function EmployeesPage() {
   }
 
   function removeRow(id: number) {
-    setRows((prev) => prev.filter((r) => r.id !== id));
-    void deleteRow(id);
-    loadEmployees();
+    setDeleteConfirmId(id);
+  }
+
+  function confirmDelete() {
+    if (deleteConfirmId === null) return;
+    setRows((prev) => prev.filter((r) => r.id !== deleteConfirmId));
+    void deleteRow(deleteConfirmId);
+    void loadEmployees();
+    setDeleteConfirmId(null);
   }
 
   return (
     <main
       style={{
-        padding: '2rem',
+        padding: '2rem 3rem',
         width: '100%',
-        maxWidth: '1100px',
-        margin: '0 auto',
+        maxWidth: '100%',
+        margin: 0,
       }}
     >
       <header
@@ -169,13 +197,13 @@ export default function EmployeesPage() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '1.5rem',
+          marginBottom: '1.75rem',
           gap: '1rem',
         }}
       >
         <div>
-          <h1 style={{ fontSize: '1.5rem' }}>Zamestnanci</h1>
-          <p style={{ fontSize: '0.875rem', color: 'var(--becode-text-muted)' }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 600 }}>Zamestnanci</h1>
+          <p style={{ fontSize: '0.9rem', color: 'var(--becode-text-muted)', marginTop: '0.25rem' }}>
             Meno, kontakt a hodinovka pre výpočet nákladov na projekty.
           </p>
         </div>
@@ -183,13 +211,17 @@ export default function EmployeesPage() {
           type="button"
           onClick={addRow}
           style={{
-            padding: '0.5rem 1rem',
+            padding: '0.5rem 1.25rem',
             background: 'var(--becode-primary)',
             color: '#fff',
             borderRadius: 'var(--becode-radius)',
             border: 'none',
             fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'background 0.15s ease',
           }}
+          onMouseOver={(e) => { e.currentTarget.style.background = 'var(--becode-primary-hover)'; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = 'var(--becode-primary)'; }}
         >
           Pridať zamestnanca
         </button>
@@ -207,16 +239,15 @@ export default function EmployeesPage() {
             marginBottom: '1.5rem',
             background: 'var(--becode-surface-elevated)',
             borderRadius: 'var(--becode-radius-lg)',
-            border: '1px solid var(--becode-primary)',
-            padding: '1.5rem',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            border: '1px solid var(--becode-border)',
+            padding: '1.5rem 2rem',
           }}
         >
           <h2
             style={{
-              fontSize: '0.95rem',
-              marginBottom: '1rem',
-              color: 'var(--becode-primary)',
+              fontSize: '1rem',
+              marginBottom: '1.25rem',
+              color: 'var(--becode-text)',
               fontWeight: 600,
             }}
           >
@@ -296,28 +327,31 @@ export default function EmployeesPage() {
             <button
               type="button"
               onClick={saveNewEmployee}
+              disabled={savingNew}
               style={{
-                padding: '0.5rem 1rem',
+                padding: '0.5rem 1.25rem',
                 background: savingNew ? 'var(--becode-primary-muted)' : 'var(--becode-primary)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 'var(--becode-radius)',
                 fontWeight: 600,
                 fontSize: '0.9rem',
+                cursor: savingNew ? 'not-allowed' : 'pointer',
               }}
             >
               Uložiť zamestnanca
             </button>
             <button
               type="button"
-              onClick={() => { setShowNewForm(false); setNewEmp({ first_name: '', last_name: '', email: '', phone: '', hourly_rate: 0 }); }}
+              onClick={() => { setShowNewForm(false); setNewEmp({ first_name: '', last_name: '', email: '', phone: '', hourly_rate: 0 }); setNewError(null); }}
               style={{
-                padding: '0.5rem 1rem',
+                padding: '0.5rem 1.25rem',
                 background: 'transparent',
                 color: 'var(--becode-text-muted)',
                 border: '1px solid var(--becode-border)',
                 borderRadius: 'var(--becode-radius)',
                 fontSize: '0.9rem',
+                cursor: 'pointer',
               }}
             >
               Zrušiť
@@ -329,9 +363,9 @@ export default function EmployeesPage() {
       <section
         style={{
           marginBottom: '1.5rem',
-          display: 'flex',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: '1rem',
-          flexWrap: 'wrap',
         }}
       >
         <div
@@ -339,24 +373,22 @@ export default function EmployeesPage() {
             background: 'var(--becode-surface-elevated)',
             borderRadius: 'var(--becode-radius-lg)',
             border: '1px solid var(--becode-border)',
-            padding: '1rem 1.25rem',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            padding: '1.25rem 1.5rem',
           }}
         >
-          <p style={{ fontSize: '0.75rem', marginBottom: '0.25rem', color: 'var(--becode-text-muted)', fontWeight: 500 }}>Počet zamestnancov</p>
-          <p style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--becode-text)' }}>{rows.length}</p>
+          <p style={{ fontSize: '0.8rem', marginBottom: '0.5rem', color: 'var(--becode-text-muted)', fontWeight: 500 }}>Počet zamestnancov</p>
+          <p style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--becode-text)' }}>{rows.length}</p>
         </div>
         <div
           style={{
             background: 'var(--becode-surface-elevated)',
             borderRadius: 'var(--becode-radius-lg)',
             border: '1px solid var(--becode-border)',
-            padding: '1rem 1.25rem',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            padding: '1.25rem 1.5rem',
           }}
         >
-          <p style={{ fontSize: '0.75rem', marginBottom: '0.25rem', color: 'var(--becode-text-muted)', fontWeight: 500 }}>Priemerná hodinovka</p>
-          <p style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--becode-text)' }}>{avgRate.toFixed(2)} €</p>
+          <p style={{ fontSize: '0.8rem', marginBottom: '0.5rem', color: 'var(--becode-text-muted)', fontWeight: 500 }}>Priemerná hodinovka</p>
+          <p style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--becode-primary)' }}>{avgRate.toFixed(2)} € / h</p>
         </div>
       </section>
 
@@ -365,66 +397,214 @@ export default function EmployeesPage() {
           background: 'var(--becode-surface-elevated)',
           borderRadius: 'var(--becode-radius-lg)',
           border: '1px solid var(--becode-border)',
-          padding: '1.25rem',
+          padding: '1.5rem 2rem',
           overflowX: 'auto',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
         }}
       >
-        <h2 style={{ fontSize: '0.95rem', marginBottom: '0.75rem', color: 'var(--becode-text-muted)', fontWeight: 500 }}>
+        <h2 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--becode-text)', fontWeight: 600 }}>
           Zoznam zamestnancov
         </h2>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
           <thead>
             <tr>
-              <th style={{ textAlign: 'left', padding: '0.5rem 0.6rem', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>Meno</th>
-              <th style={{ textAlign: 'left', padding: '0.5rem 0.6rem', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>Priezvisko</th>
-              <th style={{ textAlign: 'left', padding: '0.5rem 0.6rem', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>E‑mail</th>
-              <th style={{ textAlign: 'left', padding: '0.5rem 0.6rem', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>Tel. číslo</th>
-              <th style={{ textAlign: 'right', padding: '0.5rem 0.6rem', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>Hodinovka (€)</th>
-              <th style={{ width: 120 }} />
+              <th style={{ textAlign: 'left', padding: '0.75rem 0.6rem', borderBottom: '1px solid var(--becode-border)', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>Meno</th>
+              <th style={{ textAlign: 'left', padding: '0.75rem 0.6rem', borderBottom: '1px solid var(--becode-border)', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>Priezvisko</th>
+              <th style={{ textAlign: 'left', padding: '0.75rem 0.6rem', borderBottom: '1px solid var(--becode-border)', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>E‑mail</th>
+              <th style={{ textAlign: 'left', padding: '0.75rem 0.6rem', borderBottom: '1px solid var(--becode-border)', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>Tel. číslo</th>
+              <th style={{ textAlign: 'right', padding: '0.75rem 0.6rem', borderBottom: '1px solid var(--becode-border)', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>Hodinovka (€)</th>
+              <th style={{ width: 200, padding: '0.75rem 0.6rem', borderBottom: '1px solid var(--becode-border)' }} />
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && !loading ? (
               <tr>
-                <td colSpan={6} style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--becode-text-muted)', fontSize: '0.875rem' }}>
+                <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: 'var(--becode-text-muted)', fontSize: '0.9rem' }}>
                   Zatiaľ žiadni zamestnanci. Klikni na „Pridať zamestnanca“.
                 </td>
               </tr>
             ) : (
-              rows.map((row) => (
-                <tr key={row.id} style={{ borderTop: '1px solid var(--becode-border)' }}>
-                  <td style={{ padding: '0.5rem 0.6rem' }}>
-                    <input type="text" value={row.first_name} onChange={(e) => updateRow(row.id, 'first_name', e.target.value)} placeholder="Meno" style={inputStyle} />
-                  </td>
-                  <td style={{ padding: '0.5rem 0.6rem' }}>
-                    <input type="text" value={row.last_name} onChange={(e) => updateRow(row.id, 'last_name', e.target.value)} placeholder="Priezvisko" style={inputStyle} />
-                  </td>
-                  <td style={{ padding: '0.5rem 0.6rem' }}>
-                    <input type="email" value={row.email} onChange={(e) => updateRow(row.id, 'email', e.target.value)} placeholder="email@firma.sk" style={inputStyle} />
-                  </td>
-                  <td style={{ padding: '0.5rem 0.6rem' }}>
-                    <input type="tel" value={row.phone} onChange={(e) => updateRow(row.id, 'phone', e.target.value)} placeholder="+421 ..." style={inputStyle} />
-                  </td>
-                  <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right' }}>
-                    <input type="number" value={row.hourly_rate || ''} onChange={(e) => updateRow(row.id, 'hourly_rate', Number(e.target.value) || 0)} style={{ ...inputStyle, width: 70, textAlign: 'right' }} />
-                  </td>
-                  <td style={{ padding: '0.5rem 0.6rem' }}>
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
-                      <button type="button" onClick={() => saveRow(row)} disabled={savingId === row.id} style={{ padding: '0.35rem 0.7rem', background: 'var(--becode-primary)', color: '#fff', border: 'none', borderRadius: 'var(--becode-radius)', fontSize: '0.8rem', fontWeight: 500 }}>
-                        {savingId === row.id ? '…' : 'Uložiť'}
-                      </button>
-                      <button type="button" onClick={() => removeRow(row.id)} style={{ padding: '0.35rem 0.7rem', background: 'transparent', border: '1px solid var(--becode-border)', borderRadius: 'var(--becode-radius)', color: 'var(--becode-text-muted)', fontSize: '0.8rem' }}>
-                        Zmazať
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+              rows.map((row) => {
+                const isEditing = editingId === row.id;
+                return (
+                  <tr
+                    key={row.id}
+                    style={{
+                      borderTop: '1px solid var(--becode-border)',
+                      background: isEditing ? 'var(--becode-primary-muted)' : undefined,
+                    }}
+                  >
+                    <td style={{ padding: '0.75rem 0.6rem' }}>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={row.first_name}
+                          onChange={(e) => updateRow(row.id, 'first_name', e.target.value)}
+                          placeholder="Meno"
+                          style={inputStyle}
+                        />
+                      ) : (
+                        <span style={{ color: 'var(--becode-text)' }}>{row.first_name || '–'}</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '0.75rem 0.6rem' }}>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={row.last_name}
+                          onChange={(e) => updateRow(row.id, 'last_name', e.target.value)}
+                          placeholder="Priezvisko"
+                          style={inputStyle}
+                        />
+                      ) : (
+                        <span style={{ color: 'var(--becode-text)' }}>{row.last_name || '–'}</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '0.75rem 0.6rem' }}>
+                      {isEditing ? (
+                        <input
+                          type="email"
+                          value={row.email}
+                          onChange={(e) => updateRow(row.id, 'email', e.target.value)}
+                          placeholder="email@firma.sk"
+                          style={inputStyle}
+                        />
+                      ) : (
+                        <span style={{ color: 'var(--becode-text-muted)' }}>{row.email || '–'}</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '0.75rem 0.6rem' }}>
+                      {isEditing ? (
+                        <input
+                          type="tel"
+                          value={row.phone}
+                          onChange={(e) => updateRow(row.id, 'phone', e.target.value)}
+                          placeholder="+421 ..."
+                          style={inputStyle}
+                        />
+                      ) : (
+                        <span style={{ color: 'var(--becode-text-muted)' }}>{row.phone || '–'}</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '0.75rem 0.6rem', textAlign: 'right' }}>
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          value={row.hourly_rate || ''}
+                          onChange={(e) =>
+                            updateRow(row.id, 'hourly_rate', Number(e.target.value) || 0)
+                          }
+                          style={{ ...inputStyle, width: 80, textAlign: 'right' }}
+                        />
+                      ) : (
+                        <span style={{ color: 'var(--becode-primary)', fontWeight: 500 }}>
+                          {row.hourly_rate ? `${row.hourly_rate} €` : '–'}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '0.75rem 0.6rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {isEditing ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => saveRow(row)}
+                              disabled={savingId === row.id}
+                              style={{
+                                padding: '0.4rem 0.85rem',
+                                background: 'var(--becode-primary)',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: 'var(--becode-radius)',
+                                fontSize: '0.85rem',
+                                fontWeight: 500,
+                                cursor: savingId === row.id ? 'wait' : 'pointer',
+                                transition: 'background 0.15s ease',
+                              }}
+                            >
+                              {savingId === row.id ? '…' : 'Uložiť'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEditing}
+                              style={{
+                                padding: '0.4rem 0.85rem',
+                                background: 'transparent',
+                                border: '1px solid var(--becode-border)',
+                                borderRadius: 'var(--becode-radius)',
+                                color: 'var(--becode-text-muted)',
+                                fontSize: '0.85rem',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Zrušiť
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => startEditing(row)}
+                            style={{
+                              padding: '0.4rem 0.85rem',
+                              background: 'var(--becode-primary)',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: 'var(--becode-radius)',
+                              fontSize: '0.85rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              transition: 'background 0.15s ease',
+                            }}
+                          >
+                            Upraviť
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeRow(row.id)}
+                          disabled={isEditing}
+                          style={{
+                            padding: '0.4rem 0.85rem',
+                            background: 'transparent',
+                            border: '1px solid var(--becode-border)',
+                            borderRadius: 'var(--becode-radius)',
+                            color: 'var(--becode-text-muted)',
+                            fontSize: '0.85rem',
+                            cursor: isEditing ? 'not-allowed' : 'pointer',
+                            opacity: isEditing ? 0.5 : 1,
+                            transition: 'border-color 0.15s ease, color 0.15s ease',
+                          }}
+                          onMouseOver={(e) => {
+                            if (!isEditing) {
+                              e.currentTarget.style.borderColor = 'var(--becode-error-text)';
+                              e.currentTarget.style.color = 'var(--becode-error-text)';
+                            }
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.borderColor = 'var(--becode-border)';
+                            e.currentTarget.style.color = 'var(--becode-text-muted)';
+                          }}
+                        >
+                          Zmazať
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </section>
+
+      <ConfirmModal
+        open={deleteConfirmId !== null}
+        title="Zmazať zamestnanca"
+        message="Naozaj chcete zmazať tohto zamestnanca? Táto akcia sa nedá vrátiť späť."
+        confirmLabel="Zmazať"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
     </main>
   );
 }

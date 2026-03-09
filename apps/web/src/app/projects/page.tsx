@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 /** Fixné kategórie – zisk sa delí rovnomerne /3 */
 const CATEGORIES = [
@@ -19,6 +20,7 @@ type Row = {
   project: string;
   projectDate: string;
   amountWithoutVat: number;
+  manualCost: number;
   projectEmployees: ProjectEmployee[];
 };
 
@@ -40,6 +42,7 @@ export default function ProjectsPage() {
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [nextId, setNextId] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -64,7 +67,7 @@ export default function ProjectsPage() {
       setLoading(true);
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select('id, project, project_date, amount_without_vat, cost')
+        .select('id, project, project_date, amount_without_vat, cost, manual_cost')
         .order('id', { ascending: true });
       if (projectsError) {
         console.error('Chyba pri načítaní projektov z DB:', projectsError.message);
@@ -93,6 +96,7 @@ export default function ProjectsPage() {
         project: r.project ?? '',
         projectDate: r.project_date ? r.project_date.slice(0, 10) : '',
         amountWithoutVat: Number(r.amount_without_vat ?? 0),
+        manualCost: Number(r.manual_cost ?? 0),
         projectEmployees: projectEmployeesByProject[Number(r.id)] ?? [],
       }));
       setRows(mapped);
@@ -103,11 +107,15 @@ export default function ProjectsPage() {
     load();
   }, []);
 
-  function calcCost(row: Row): number {
+  function costFromEmployees(row: Row): number {
     return row.projectEmployees.reduce((sum, pe) => {
       const emp = employees.find((e) => e.id === pe.employeeId);
       return sum + pe.hours * (emp?.hourlyRate ?? 0);
     }, 0);
+  }
+
+  function totalCost(row: Row): number {
+    return costFromEmployees(row) + row.manualCost;
   }
 
   function totalHoursFromEmployees(row: Row): number {
@@ -115,7 +123,7 @@ export default function ProjectsPage() {
   }
 
   function profit(row: Row): number {
-    return row.amountWithoutVat - calcCost(row);
+    return row.amountWithoutVat - totalCost(row);
   }
 
   function profitPerCategory(row: Row): number {
@@ -124,13 +132,13 @@ export default function ProjectsPage() {
 
   async function syncRowToDb(row: Row) {
     const supabase = createClient();
-    const cost = calcCost(row);
     const { error: projectError } = await supabase.from('projects').upsert({
       id: row.id,
       project: row.project,
       project_date: row.projectDate || null,
       amount_without_vat: row.amountWithoutVat,
-      cost: calcCost(row),
+      cost: totalCost(row),
+      manual_cost: row.manualCost,
       total_hours: totalHoursFromEmployees(row),
     });
     if (projectError) {
@@ -171,6 +179,7 @@ export default function ProjectsPage() {
         project: '',
         projectDate: today,
         amountWithoutVat: 0,
+        manualCost: 0,
         projectEmployees: [],
       };
       void syncRowToDb(newRow);
@@ -228,13 +237,19 @@ export default function ProjectsPage() {
   }
 
   function removeRow(id: number) {
-    setRows((prev) => prev.filter((row) => row.id !== id));
-    void deleteRowFromDb(id);
+    setDeleteConfirmId(id);
+  }
+
+  function confirmDelete() {
+    if (deleteConfirmId === null) return;
+    setRows((prev) => prev.filter((row) => row.id !== deleteConfirmId));
+    void deleteRowFromDb(deleteConfirmId);
+    setDeleteConfirmId(null);
   }
 
   const totals = useMemo(() => {
     const revenue = rows.reduce((sum, r) => sum + r.amountWithoutVat, 0);
-    const cost = rows.reduce((sum, r) => sum + calcCost(r), 0);
+    const cost = rows.reduce((sum, r) => sum + totalCost(r), 0);
     const profit = revenue - cost;
     return { revenue, cost, profit };
   }, [rows, employees]);
@@ -344,35 +359,13 @@ export default function ProjectsPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, idx) => {
+            {rows.map((row) => {
               const rowProfit = profit(row);
               const share = profitPerCategory(row);
-              const rowBg = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)';
               return (
-                <tr
-                  key={row.id}
-                  style={{
-                    borderTop: '1px solid var(--becode-border)',
-                    background: rowBg,
-                    transition: 'background 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(234, 88, 12, 0.06)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = rowBg;
-                  }}
-                >
-                  <td
-                    style={{
-                      padding: '0.85rem 0.6rem',
-                      borderTop: '1px solid var(--becode-border)',
-                      borderLeft: '3px solid var(--becode-primary)',
-                    }}
-                  >
-                    <span style={{ fontWeight: 600, color: 'var(--becode-text-muted)', fontSize: '0.9rem' }}>
-                      {row.id}
-                    </span>
+                <tr key={row.id}>
+                  <td style={{ padding: '0.85rem 0.6rem', borderTop: '1px solid var(--becode-border)' }}>
+                    {row.id}
                   </td>
                   <td style={{ padding: '0.85rem 0.6rem', borderTop: '1px solid var(--becode-border)' }}>
                     <input
@@ -382,23 +375,13 @@ export default function ProjectsPage() {
                       style={{ ...inputBase }}
                     />
                   </td>
-                  <td
-                    style={{
-                      padding: '0.85rem 0.6rem',
-                      borderTop: '1px solid var(--becode-border)',
-                      background: row.project.trim() ? 'rgba(234, 88, 12, 0.04)' : undefined,
-                    }}
-                  >
+                  <td style={{ padding: '0.85rem 0.6rem', borderTop: '1px solid var(--becode-border)' }}>
                     <input
                       type="text"
                       value={row.project}
                       onChange={(e) => updateRow(row.id, 'project', e.target.value)}
                       placeholder="Názov projektu"
-                      style={{
-                        ...inputBase,
-                        fontWeight: row.project.trim() ? 600 : 400,
-                        fontSize: row.project.trim() ? '1rem' : '0.95rem',
-                      }}
+                      style={{ ...inputBase }}
                     />
                   </td>
                   <td
@@ -545,11 +528,30 @@ export default function ProjectsPage() {
                       padding: '0.85rem 0.6rem',
                       borderTop: '1px solid var(--becode-border)',
                       textAlign: 'right',
-                      color: 'var(--becode-text-muted)',
-                      fontWeight: 500,
                     }}
                   >
-                    {calcCost(row).toFixed(2)}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                      <input
+                        type="number"
+                        min={0}
+                        value={row.manualCost || ''}
+                        onChange={(e) =>
+                          updateRow(row.id, 'manualCost', Number(e.target.value) || 0)
+                        }
+                        placeholder="0"
+                        style={{ ...inputBase, textAlign: 'right' }}
+                      />
+                      {row.projectEmployees.length > 0 && (
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--becode-text-muted)',
+                          }}
+                        >
+                          Spolu: {totalCost(row).toFixed(2)} €
+                        </span>
+                      )}
+                    </div>
                   </td>
                   {CATEGORIES.map((cat) => (
                     <td
@@ -669,6 +671,16 @@ export default function ProjectsPage() {
           </p>
         </div>
       </section>
+
+      <ConfirmModal
+        open={deleteConfirmId !== null}
+        title="Zmazať projekt"
+        message="Naozaj chcete zmazať tento projekt? Táto akcia sa nedá vrátiť späť."
+        confirmLabel="Zmazať"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
     </main>
   );
 }

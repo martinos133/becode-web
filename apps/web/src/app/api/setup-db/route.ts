@@ -39,6 +39,7 @@ ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS be_code_hours numeric(8,2) 
 ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS vlado_hours numeric(8,2) DEFAULT 0;
 ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS mato_hours numeric(8,2) DEFAULT 0;
 ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS total_hours numeric(8,2) DEFAULT 0;
+ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS manual_cost numeric(12,2) DEFAULT 0;
 DROP POLICY IF EXISTS "projects_select" ON public.projects;
 CREATE POLICY "projects_select" ON public.projects FOR SELECT TO authenticated USING (true);
 DROP POLICY IF EXISTS "projects_insert" ON public.projects;
