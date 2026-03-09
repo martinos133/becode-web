@@ -45,7 +45,14 @@ export default function LoginPage() {
       router.push('/dashboard');
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Chyba pri prihlásení.');
+      const msg = err instanceof Error ? err.message : 'Chyba pri prihlásení.';
+      if (msg === 'Failed to fetch') {
+        setError(
+          'Sieťová chyba. Skontrolujte: 1) či beží API (npm run dev:api, port 3001), 2) či NEXT_PUBLIC_API_URL je http://localhost:3001, 3) pripojenie na Supabase.'
+        );
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -65,10 +72,11 @@ export default function LoginPage() {
         style={{
           width: '100%',
           maxWidth: '400px',
-          background: '#1e293b',
-          borderRadius: '12px',
+          background: 'var(--becode-surface-elevated)',
+          borderRadius: 'var(--becode-radius-lg)',
           padding: '2rem',
           boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+          border: '1px solid var(--becode-border)',
         }}
       >
         <h1 style={{ marginBottom: '1.5rem', fontSize: '1.5rem' }}>
@@ -77,7 +85,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit}>
           <label
             htmlFor="email"
-            style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}
+            style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: 'var(--becode-text-muted)' }}
           >
             E-mail
           </label>
@@ -92,15 +100,15 @@ export default function LoginPage() {
               width: '100%',
               padding: '0.75rem',
               marginBottom: '1rem',
-              background: '#0f172a',
-              border: '1px solid #334155',
-              borderRadius: '8px',
-              color: '#e2e8f0',
+              background: 'var(--becode-input-bg)',
+              border: '1px solid var(--becode-border)',
+              borderRadius: 'var(--becode-radius)',
+              color: 'var(--becode-text)',
             }}
           />
           <label
             htmlFor="password"
-            style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}
+            style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: 'var(--becode-text-muted)' }}
           >
             Heslo
           </label>
@@ -115,10 +123,10 @@ export default function LoginPage() {
               width: '100%',
               padding: '0.75rem',
               marginBottom: '1rem',
-              background: '#0f172a',
-              border: '1px solid #334155',
-              borderRadius: '8px',
-              color: '#e2e8f0',
+              background: 'var(--becode-input-bg)',
+              border: '1px solid var(--becode-border)',
+              borderRadius: 'var(--becode-radius)',
+              color: 'var(--becode-text)',
             }}
           />
           {error && (
@@ -126,9 +134,9 @@ export default function LoginPage() {
               style={{
                 marginBottom: '1rem',
                 padding: '0.75rem',
-                background: 'rgba(239,68,68,0.2)',
-                borderRadius: '8px',
-                color: '#fca5a5',
+                background: 'var(--becode-error-bg)',
+                borderRadius: 'var(--becode-radius)',
+                color: 'var(--becode-error-text)',
                 fontSize: '0.875rem',
               }}
             >
@@ -141,17 +149,17 @@ export default function LoginPage() {
             style={{
               width: '100%',
               padding: '0.75rem',
-              background: loading ? '#475569' : '#3b82f6',
+              background: loading ? 'var(--becode-border)' : 'var(--becode-primary)',
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: 'var(--becode-radius)',
               fontWeight: 600,
             }}
           >
             {loading ? 'Prihlasujem…' : 'Prihlásiť sa'}
           </button>
         </form>
-        <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: '#94a3b8' }}>
+        <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: 'var(--becode-text-muted)' }}>
           <a href="/">Späť na úvod</a>
         </p>
       </div>

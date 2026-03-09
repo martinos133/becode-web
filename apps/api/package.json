@@ -6,7 +6,10 @@
     "build": "nest build",
     "dev": "nest start --watch",
     "start": "nest start",
-    "start:prod": "node dist/main"
+    "start:prod": "node dist/main",
+    "create-user": "node scripts/create-user.mjs",
+    "confirm-email": "node scripts/confirm-user-email.mjs",
+    "set-password": "node scripts/set-password.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.7",
@@ -16,6 +19,7 @@
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.4.7",
     "@supabase/supabase-js": "^2.47.10",
+    "dotenv": "^16.4.5",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",

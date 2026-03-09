@@ -5,6 +5,7 @@
     "apps/*"
   ],
   "scripts": {
+    "db:setup": "node scripts/setup-employees-table.mjs",
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
     "dev:api": "npm run dev --workspace=apps/api",
     "dev:web": "npm run dev --workspace=apps/web",
@@ -13,6 +14,7 @@
     "start:web": "npm run start --workspace=apps/web"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "pg": "^8.13.1"
   }
 }

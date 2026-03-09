@@ -16,6 +16,13 @@ export const env = {
     return process.env.CORS_ORIGIN ?? 'http://localhost:3000';
   },
 
+  /** Povolené originy pre CORS (localhost:3000, 3002 + CORS_ORIGIN ak je viac oddelených čiarkou). */
+  get corsOrigins(): string[] {
+    const fromEnv = process.env.CORS_ORIGIN?.split(',').map((o) => o.trim()).filter(Boolean) ?? [];
+    const defaults = ['http://localhost:3000', 'http://localhost:3002'];
+    return [...new Set([...defaults, ...fromEnv])];
+  },
+
   get supabaseUrl(): string {
     const v = process.env.SUPABASE_URL;
     if (!v) throw new Error('SUPABASE_URL musí byť nastavený v .env');

@@ -1,8 +1,6 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { Controller, Get } from '@nestjs/common';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser, RequestUser } from './decorators/user.decorator';
-import { SupabaseAuthGuard } from './guards/supabase-auth.guard';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -15,7 +13,6 @@ export class AuthController {
     return { status: 'ok', service: 'auth' };
   }
 
-  @UseGuards(SupabaseAuthGuard)
   @Get('me')
   me(@CurrentUser() user: RequestUser) {
     return { user };

@@ -1,3 +1,23 @@
+/* BeCode – farby ako na www.becode.sk */
+:root {
+  --becode-bg: #0a0a0a;
+  --becode-surface: #141414;
+  --becode-surface-elevated: #1a1a1a;
+  --becode-border: #262626;
+  --becode-text: #fafafa;
+  --becode-text-muted: #a3a3a3;
+  --becode-primary: #ea580c;
+  --becode-primary-hover: #f97316;
+  --becode-primary-muted: rgba(234, 88, 12, 0.15);
+  --becode-link: #f97316;
+  --becode-link-hover: #fb923c;
+  --becode-error-bg: rgba(239, 68, 68, 0.15);
+  --becode-error-text: #fca5a5;
+  --becode-input-bg: #171717;
+  --becode-radius: 8px;
+  --becode-radius-lg: 12px;
+}
+
 * {
   box-sizing: border-box;
   padding: 0;
@@ -8,23 +28,44 @@ html,
 body {
   max-width: 100vw;
   min-height: 100vh;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: var(--becode-bg);
+  color: var(--becode-text);
 }
 
 a {
-  color: #38bdf8;
+  color: var(--becode-link);
   text-decoration: none;
 }
 
 a:hover {
+  color: var(--becode-link-hover);
   text-decoration: underline;
 }
 
 input,
 button {
   font: inherit;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--becode-primary);
+  box-shadow: 0 0 0 1px var(--becode-primary-muted);
+}
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M3 4.5 L6 7.5 L9 4.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+select:hover {
+  border-color: var(--becode-text-muted);
 }
 
 button {
