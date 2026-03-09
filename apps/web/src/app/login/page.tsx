@@ -42,7 +42,7 @@ export default function LoginPage() {
         return;
       }
       sessionStorage.setItem('supabase_token', token);
-      router.push('/dashboard');
+      router.push('/projects');
       router.refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Chyba pri prihlásení.';
@@ -122,13 +122,21 @@ export default function LoginPage() {
             style={{
               width: '100%',
               padding: '0.75rem',
-              marginBottom: '1rem',
+              marginBottom: '0.5rem',
               background: 'var(--becode-input-bg)',
               border: '1px solid var(--becode-border)',
               borderRadius: 'var(--becode-radius)',
               color: 'var(--becode-text)',
             }}
           />
+          <p style={{ marginBottom: '1rem', textAlign: 'right' }}>
+            <a
+              href="/reset-password"
+              style={{ fontSize: '0.8rem', color: 'var(--becode-primary)', textDecoration: 'none' }}
+            >
+              Zabudnuté heslo?
+            </a>
+          </p>
           {error && (
             <p
               style={{

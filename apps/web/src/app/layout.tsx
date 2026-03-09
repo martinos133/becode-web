@@ -59,7 +59,7 @@ export default function RootLayout({
               <NavItem href="/projects" label="Projekty" />
               <NavItem href="/employees" label="Zamestnanci" />
               <NavItem href="/stats" label="Štatistiky" />
-              <NavItem href="/dashboard" label="Admin" primary />
+              <NavItem href="/settings" label="Admin" primary />
             </div>
           </nav>
         </header>

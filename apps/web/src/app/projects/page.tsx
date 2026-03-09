@@ -531,6 +531,15 @@ export default function ProjectsPage() {
                     }}
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                      <span
+                        style={{
+                          fontSize: '1rem',
+                          fontWeight: 600,
+                          color: 'var(--becode-text)',
+                        }}
+                      >
+                        {totalCost(row).toFixed(2)} €
+                      </span>
                       <input
                         type="number"
                         min={0}
@@ -538,17 +547,18 @@ export default function ProjectsPage() {
                         onChange={(e) =>
                           updateRow(row.id, 'manualCost', Number(e.target.value) || 0)
                         }
-                        placeholder="0"
-                        style={{ ...inputBase, textAlign: 'right' }}
+                        placeholder="+ Ručné"
+                        style={{ ...inputBase, padding: '0.35rem 0.5rem', textAlign: 'right', fontSize: '0.85rem' }}
+                        title="Dodatočné ručné náklady"
                       />
-                      {row.projectEmployees.length > 0 && (
+                      {row.projectEmployees.length > 0 && costFromEmployees(row) > 0 && (
                         <span
                           style={{
-                            fontSize: '0.75rem',
+                            fontSize: '0.7rem',
                             color: 'var(--becode-text-muted)',
                           }}
                         >
-                          Spolu: {totalCost(row).toFixed(2)} €
+                          z toho: {costFromEmployees(row).toFixed(2)} € (hodiny)
                         </span>
                       )}
                     </div>

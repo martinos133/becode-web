@@ -19,6 +19,9 @@ Projekt pozostáva z **Next.js** frontendu a **Nest.js** API s prihlásením cez
 3. V **Authentication → Users** pridaj používateľa (alebo sa zaregistruj):
    - E-mail: `muha@becode.sk`
    - Heslo: `Welcome2025+`
+4. Pre reset hesla cez email: **Authentication → URL Configuration** → pridaj do **Redirect URLs**:
+   - `http://localhost:3000/reset-password` (vývoj)
+   - `https://tvojadomena.sk/reset-password` (produkcia)
 
 ### 2. Env premenné
 
@@ -28,6 +31,7 @@ Projekt pozostáva z **Next.js** frontendu a **Nest.js** API s prihlásením cez
 cd apps/api
 cp .env.example .env
 # Uprav .env: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET
+# Pre vytváranie nových používateľov cez Admin: pridaj SUPABASE_SERVICE_ROLE_KEY (Project Settings → API)
 ```
 
 **Web (apps/web):**
