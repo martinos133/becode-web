@@ -27,10 +27,11 @@ export default function RootLayout({
           }}
         >
           <nav
+            className="becode-nav-wrap"
             style={{
               width: '100%',
               margin: 0,
-              padding: '0.75rem 3rem',
+              padding: '0.75rem 1.5rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -50,6 +51,7 @@ export default function RootLayout({
               <span style={{ color: 'var(--becode-primary)' }}>Admin</span>
             </span>
             <div
+              className="becode-nav-links"
               style={{
                 display: 'flex',
                 gap: '0.5rem',

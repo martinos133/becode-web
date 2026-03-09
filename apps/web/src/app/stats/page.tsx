@@ -209,14 +209,15 @@ export default function StatsPage() {
 
   return (
     <main
+      className="becode-page-padding"
       style={{
-        padding: '2rem 3rem',
+        padding: '1.5rem 2rem',
         width: '100%',
         maxWidth: '100%',
         margin: 0,
       }}
     >
-      <header style={{ marginBottom: '2rem' }}>
+      <header className="becode-header-flex" style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.75rem', fontWeight: 600 }}>Štatistiky</h1>
         <p style={{ fontSize: '0.9rem', color: 'var(--becode-text-muted)', marginTop: '0.25rem' }}>
           Súhrn projektov, zamestnancov a výkazov hodín.

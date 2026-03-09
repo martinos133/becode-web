@@ -256,8 +256,9 @@ export default function ProjectsPage() {
 
   return (
     <main
+      className="becode-page-padding"
       style={{
-        padding: '2rem 3rem',
+        padding: '1.5rem 2rem',
         width: '100%',
         maxWidth: '100%',
         minWidth: 0,
@@ -265,6 +266,7 @@ export default function ProjectsPage() {
       }}
     >
       <header
+        className="becode-header-flex"
         style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -276,6 +278,7 @@ export default function ProjectsPage() {
         <h1 style={{ fontSize: '1.75rem', fontWeight: 600 }}>Projekty &amp; výsledok</h1>
         <button
           type="button"
+          className="projects-add-btn"
           onClick={addRow}
           style={{
             padding: '0.5rem 1.25rem',
@@ -309,16 +312,220 @@ export default function ProjectsPage() {
         </p>
       )}
 
+      {/* Súhrn – hneď na začiatku pre prehľad */}
+      <section
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: '1rem',
+          marginBottom: '1.5rem',
+        }}
+      >
+        <div
+          style={{
+            background: 'var(--becode-surface-elevated)',
+            borderRadius: 'var(--becode-radius-lg)',
+            border: '1px solid var(--becode-border)',
+            padding: '1rem 1.25rem',
+          }}
+        >
+          <p style={{ fontSize: '0.75rem', marginBottom: '0.25rem', color: 'var(--becode-text-muted)', fontWeight: 500 }}>Príjmy</p>
+          <p style={{ fontSize: '1.25rem', fontWeight: 600 }}>{totals.revenue.toFixed(2)} €</p>
+        </div>
+        <div
+          style={{
+            background: 'var(--becode-surface-elevated)',
+            borderRadius: 'var(--becode-radius-lg)',
+            border: '1px solid var(--becode-border)',
+            padding: '1rem 1.25rem',
+          }}
+        >
+          <p style={{ fontSize: '0.75rem', marginBottom: '0.25rem', color: 'var(--becode-text-muted)', fontWeight: 500 }}>Náklady</p>
+          <p style={{ fontSize: '1.25rem', fontWeight: 600 }}>{totals.cost.toFixed(2)} €</p>
+        </div>
+        <div
+          style={{
+            background: 'var(--becode-surface-elevated)',
+            borderRadius: 'var(--becode-radius-lg)',
+            border: '1px solid var(--becode-border)',
+            padding: '1rem 1.25rem',
+          }}
+        >
+          <p style={{ fontSize: '0.75rem', marginBottom: '0.25rem', color: 'var(--becode-text-muted)', fontWeight: 500 }}>Zisk</p>
+          <p
+            style={{
+              fontSize: '1.25rem',
+              fontWeight: 600,
+              color: totals.profit >= 0 ? 'var(--becode-primary)' : 'var(--becode-error-text)',
+            }}
+          >
+            {totals.profit.toFixed(2)} €
+          </p>
+        </div>
+      </section>
+
       <section
         style={{
           background: 'var(--becode-surface-elevated)',
           borderRadius: 'var(--becode-radius-lg)',
           border: '1px solid var(--becode-border)',
-          padding: '1.5rem 2rem',
+          padding: '1rem 1.25rem',
           marginBottom: '1.5rem',
         }}
       >
+        {/* Mobil – karty */}
+        <div className="projects-mobile-cards">
+          {rows.map((row) => {
+            const rowProfit = profit(row);
+            const share = profitPerCategory(row);
+            const cardStyle = {
+              background: 'var(--becode-surface)',
+              borderRadius: 'var(--becode-radius-lg)',
+              border: '1px solid var(--becode-border)',
+              padding: '1.25rem',
+              marginBottom: '1rem',
+            };
+            const fieldStyle = { marginBottom: '1rem' };
+            const labelStyle = { display: 'block', marginBottom: '0.35rem', fontSize: '0.75rem', color: 'var(--becode-text-muted)', fontWeight: 500 } as const;
+            return (
+              <div key={row.id} style={cardStyle}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--becode-text-muted)' }}>Projekt #{row.id}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeRow(row.id)}
+                    style={{
+                      padding: '0.35rem 0.6rem',
+                      background: 'transparent',
+                      borderRadius: 'var(--becode-radius)',
+                      border: '1px solid var(--becode-border)',
+                      color: 'var(--becode-error-text)',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Zmazať
+                  </button>
+                </div>
+                <div style={fieldStyle}>
+                  <label style={labelStyle}>Dátum</label>
+                  <input
+                    type="date"
+                    value={row.projectDate}
+                    onChange={(e) => updateRow(row.id, 'projectDate', e.target.value)}
+                    style={{ ...inputBase }}
+                  />
+                </div>
+                <div style={fieldStyle}>
+                  <label style={labelStyle}>Názov projektu</label>
+                  <input
+                    type="text"
+                    value={row.project}
+                    onChange={(e) => updateRow(row.id, 'project', e.target.value)}
+                    placeholder="Názov projektu"
+                    style={{ ...inputBase }}
+                  />
+                </div>
+                <div style={fieldStyle}>
+                  <label style={labelStyle}>Suma bez DPH (€)</label>
+                  <input
+                    type="number"
+                    value={row.amountWithoutVat || ''}
+                    onChange={(e) => updateRow(row.id, 'amountWithoutVat', Number(e.target.value) || 0)}
+                    style={{ ...inputBase, textAlign: 'right' }}
+                  />
+                </div>
+                <div style={fieldStyle}>
+                  <label style={labelStyle}>Zamestnanci</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {row.projectEmployees.map((pe) => {
+                      const emp = employees.find((e) => e.id === pe.employeeId);
+                      return (
+                        <div
+                          key={pe.employeeId}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.5rem',
+                            background: 'var(--becode-primary-muted)',
+                            borderRadius: 'var(--becode-radius)',
+                          }}
+                        >
+                          <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 500 }}>{emp?.label ?? `#${pe.employeeId}`}</span>
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.5}
+                            value={pe.hours || ''}
+                            onChange={(e) => updateEmployeeHours(row.id, pe.employeeId, Number(e.target.value) || 0)}
+                            placeholder="h"
+                            style={{ ...inputBase, width: 72, padding: '0.4rem', textAlign: 'right' }}
+                          />
+                          <button type="button" onClick={() => removeEmployeeFromRow(row.id, pe.employeeId)} style={{ padding: '0.25rem', background: 'transparent', border: 'none', color: 'var(--becode-text-muted)', cursor: 'pointer', fontSize: '1.1rem' }} aria-label="Odstrániť">×</button>
+                        </div>
+                      );
+                    })}
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const id = e.target.value ? Number(e.target.value) : 0;
+                        if (id) addEmployeeToRow(row.id, id);
+                        e.target.value = '';
+                      }}
+                      style={{
+                        padding: '0.5rem',
+                        background: 'transparent',
+                        borderRadius: 'var(--becode-radius)',
+                        border: '1px dashed var(--becode-border)',
+                        color: 'var(--becode-text-muted)',
+                        fontSize: '0.9rem',
+                        cursor: 'pointer',
+                        width: '100%',
+                      }}
+                    >
+                      <option value="">+ Pridať zamestnanca</option>
+                      {employees.filter((e) => !row.projectEmployees.some((pe) => pe.employeeId === e.id)).map((emp) => (
+                        <option key={emp.id} value={emp.id}>{emp.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div style={fieldStyle}>
+                  <label style={labelStyle}>Náklady</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>{totalCost(row).toFixed(2)} €</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={row.manualCost || ''}
+                      onChange={(e) => updateRow(row.id, 'manualCost', Number(e.target.value) || 0)}
+                      placeholder="+ Ručné"
+                      style={{ ...inputBase, flex: 1, padding: '0.4rem', fontSize: '0.85rem', textAlign: 'right' }}
+                      title="Ručné náklady"
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--becode-border)' }}>
+                  <div>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--becode-text-muted)' }}>Zisk</span>
+                    <p style={{ fontSize: '1.1rem', fontWeight: 600, color: rowProfit >= 0 ? 'var(--becode-primary)' : 'var(--becode-error-text)' }}>{rowProfit.toFixed(2)} €</p>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--becode-text-muted)' }}>BeCode / Vlado / Maťo</span>
+                    <p style={{ fontSize: '1rem', fontWeight: 500, color: share >= 0 ? 'var(--becode-primary)' : 'var(--becode-error-text)' }}>{share.toFixed(2)} €</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop – tabuľka */}
+        <div className="projects-desktop-table">
+        <div className="becode-table-scroll">
         <table
+          className="becode-projects-table"
           style={{
             width: '100%',
             tableLayout: 'fixed',
@@ -625,60 +832,7 @@ export default function ProjectsPage() {
             })}
           </tbody>
         </table>
-      </section>
-
-      <section
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '1.25rem',
-        }}
-      >
-        <div
-          style={{
-            background: 'var(--becode-surface-elevated)',
-            borderRadius: 'var(--becode-radius-lg)',
-            border: '1px solid var(--becode-border)',
-            padding: '1.5rem',
-          }}
-        >
-          <h2 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--becode-text-muted)', fontWeight: 500 }}>Príjmy (bez DPH)</h2>
-          <p style={{ fontSize: '1.5rem', fontWeight: 600 }}>
-            {totals.revenue.toFixed(2)} €
-          </p>
         </div>
-        <div
-          style={{
-            background: 'var(--becode-surface-elevated)',
-            borderRadius: 'var(--becode-radius-lg)',
-            border: '1px solid var(--becode-border)',
-            padding: '1.5rem',
-          }}
-        >
-          <h2 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--becode-text-muted)', fontWeight: 500 }}>Náklady</h2>
-          <p style={{ fontSize: '1.5rem', fontWeight: 600 }}>
-            {totals.cost.toFixed(2)} €
-          </p>
-        </div>
-        <div
-          style={{
-            background: 'var(--becode-surface-elevated)',
-            borderRadius: 'var(--becode-radius-lg)',
-            border: '1px solid var(--becode-border)',
-            padding: '1.5rem',
-          }}
-        >
-          <h2 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--becode-text-muted)', fontWeight: 500 }}>Čistý zisk</h2>
-          <p
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 600,
-              color:
-                totals.profit >= 0 ? 'var(--becode-primary)' : 'var(--becode-error-text)',
-            }}
-          >
-            {totals.profit.toFixed(2)} €
-          </p>
         </div>
       </section>
 

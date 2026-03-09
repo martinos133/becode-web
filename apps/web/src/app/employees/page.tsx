@@ -185,14 +185,16 @@ export default function EmployeesPage() {
 
   return (
     <main
+      className="becode-page-padding"
       style={{
-        padding: '2rem 3rem',
+        padding: '1.5rem 2rem',
         width: '100%',
         maxWidth: '100%',
         margin: 0,
       }}
     >
       <header
+        className="becode-header-flex"
         style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -209,6 +211,7 @@ export default function EmployeesPage() {
         </div>
         <button
           type="button"
+          className="employees-add-btn"
           onClick={addRow}
           style={{
             padding: '0.5rem 1.25rem',
@@ -240,7 +243,7 @@ export default function EmployeesPage() {
             background: 'var(--becode-surface-elevated)',
             borderRadius: 'var(--becode-radius-lg)',
             border: '1px solid var(--becode-border)',
-            padding: '1.5rem 2rem',
+            padding: '1.25rem 1.5rem',
           }}
         >
           <h2
@@ -254,6 +257,7 @@ export default function EmployeesPage() {
             Nový zamestnanec
           </h2>
           <div
+            className="new-employee-fields"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
@@ -397,20 +401,165 @@ export default function EmployeesPage() {
           background: 'var(--becode-surface-elevated)',
           borderRadius: 'var(--becode-radius-lg)',
           border: '1px solid var(--becode-border)',
-          padding: '1.5rem 2rem',
-          overflowX: 'auto',
+          padding: '1rem 1.25rem',
         }}
       >
         <h2 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--becode-text)', fontWeight: 600 }}>
           Zoznam zamestnancov
         </h2>
+
+        {/* Mobil – karty */}
+        <div className="employees-mobile-cards">
+          {rows.length === 0 && !loading ? (
+            <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--becode-text-muted)', fontSize: '0.9rem' }}>
+              Zatiaľ žiadni zamestnanci. Klikni na „Pridať zamestnanca“.
+            </p>
+          ) : (
+            rows.map((row) => {
+              const isEditing = editingId === row.id;
+              const cardStyle = {
+                background: isEditing ? 'var(--becode-primary-muted)' : 'var(--becode-surface)',
+                borderRadius: 'var(--becode-radius-lg)',
+                border: '1px solid var(--becode-border)',
+                padding: '1.25rem',
+                marginBottom: '1rem',
+              };
+              const fieldStyle = { marginBottom: '1rem' };
+              const labelStyle = { display: 'block', marginBottom: '0.35rem', fontSize: '0.75rem', color: 'var(--becode-text-muted)', fontWeight: 500 } as const;
+              return (
+                <div key={row.id} style={cardStyle}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '1rem', fontWeight: 600 }}>
+                      {row.first_name || row.last_name ? `${row.first_name} ${row.last_name}`.trim() : `Zamestnanec #${row.id}`}
+                    </span>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {isEditing ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => saveRow(row)}
+                            disabled={savingId === row.id}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              background: 'var(--becode-primary)',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: 'var(--becode-radius)',
+                              fontSize: '0.9rem',
+                              fontWeight: 500,
+                              cursor: savingId === row.id ? 'wait' : 'pointer',
+                            }}
+                          >
+                            {savingId === row.id ? '…' : 'Uložiť'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEditing}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              background: 'transparent',
+                              border: '1px solid var(--becode-border)',
+                              borderRadius: 'var(--becode-radius)',
+                              color: 'var(--becode-text-muted)',
+                              fontSize: '0.9rem',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Zrušiť
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => startEditing(row)}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            background: 'var(--becode-primary)',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: 'var(--becode-radius)',
+                            fontSize: '0.9rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Upraviť
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeRow(row.id)}
+                        disabled={isEditing}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          background: 'transparent',
+                          border: '1px solid var(--becode-border)',
+                          borderRadius: 'var(--becode-radius)',
+                          color: 'var(--becode-error-text)',
+                          fontSize: '0.9rem',
+                          cursor: isEditing ? 'not-allowed' : 'pointer',
+                          opacity: isEditing ? 0.5 : 1,
+                        }}
+                      >
+                        Zmazať
+                      </button>
+                    </div>
+                  </div>
+                  <div style={fieldStyle}>
+                    <label style={labelStyle}>Meno</label>
+                    {isEditing ? (
+                      <input type="text" value={row.first_name} onChange={(e) => updateRow(row.id, 'first_name', e.target.value)} placeholder="Meno" style={inputStyle} />
+                    ) : (
+                      <p style={{ margin: 0, color: 'var(--becode-text)' }}>{row.first_name || '–'}</p>
+                    )}
+                  </div>
+                  <div style={fieldStyle}>
+                    <label style={labelStyle}>Priezvisko</label>
+                    {isEditing ? (
+                      <input type="text" value={row.last_name} onChange={(e) => updateRow(row.id, 'last_name', e.target.value)} placeholder="Priezvisko" style={inputStyle} />
+                    ) : (
+                      <p style={{ margin: 0, color: 'var(--becode-text)' }}>{row.last_name || '–'}</p>
+                    )}
+                  </div>
+                  <div style={fieldStyle}>
+                    <label style={labelStyle}>E‑mail</label>
+                    {isEditing ? (
+                      <input type="email" value={row.email} onChange={(e) => updateRow(row.id, 'email', e.target.value)} placeholder="email@firma.sk" style={inputStyle} />
+                    ) : (
+                      <p style={{ margin: 0, color: 'var(--becode-text-muted)' }}>{row.email || '–'}</p>
+                    )}
+                  </div>
+                  <div style={fieldStyle}>
+                    <label style={labelStyle}>Tel. číslo</label>
+                    {isEditing ? (
+                      <input type="tel" value={row.phone} onChange={(e) => updateRow(row.id, 'phone', e.target.value)} placeholder="+421 ..." style={inputStyle} />
+                    ) : (
+                      <p style={{ margin: 0, color: 'var(--becode-text-muted)', wordBreak: 'break-all' }}>{row.phone || '–'}</p>
+                    )}
+                  </div>
+                  <div style={fieldStyle}>
+                    <label style={labelStyle}>Hodinovka (€)</label>
+                    {isEditing ? (
+                      <input type="number" value={row.hourly_rate || ''} onChange={(e) => updateRow(row.id, 'hourly_rate', Number(e.target.value) || 0)} style={{ ...inputStyle, textAlign: 'right' }} />
+                    ) : (
+                      <p style={{ margin: 0, color: 'var(--becode-primary)', fontWeight: 600, fontSize: '1.1rem' }}>{row.hourly_rate ? `${row.hourly_rate} €` : '–'}</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop – tabuľka */}
+        <div className="employees-desktop-table becode-table-scroll" style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
           <thead>
             <tr>
               <th style={{ textAlign: 'left', padding: '0.75rem 0.6rem', borderBottom: '1px solid var(--becode-border)', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>Meno</th>
               <th style={{ textAlign: 'left', padding: '0.75rem 0.6rem', borderBottom: '1px solid var(--becode-border)', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>Priezvisko</th>
               <th style={{ textAlign: 'left', padding: '0.75rem 0.6rem', borderBottom: '1px solid var(--becode-border)', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>E‑mail</th>
-              <th style={{ textAlign: 'left', padding: '0.75rem 0.6rem', borderBottom: '1px solid var(--becode-border)', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>Tel. číslo</th>
+              <th style={{ textAlign: 'left', padding: '0.75rem 0.6rem', borderBottom: '1px solid var(--becode-border)', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem', minWidth: 120 }}>Tel. číslo</th>
               <th style={{ textAlign: 'right', padding: '0.75rem 0.6rem', borderBottom: '1px solid var(--becode-border)', color: 'var(--becode-text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>Hodinovka (€)</th>
               <th style={{ width: 200, padding: '0.75rem 0.6rem', borderBottom: '1px solid var(--becode-border)' }} />
             </tr>
@@ -472,7 +621,7 @@ export default function EmployeesPage() {
                         <span style={{ color: 'var(--becode-text-muted)' }}>{row.email || '–'}</span>
                       )}
                     </td>
-                    <td style={{ padding: '0.75rem 0.6rem' }}>
+                    <td style={{ padding: '0.75rem 0.6rem', minWidth: 120 }}>
                       {isEditing ? (
                         <input
                           type="tel"
@@ -482,7 +631,7 @@ export default function EmployeesPage() {
                           style={inputStyle}
                         />
                       ) : (
-                        <span style={{ color: 'var(--becode-text-muted)' }}>{row.phone || '–'}</span>
+                        <span style={{ color: 'var(--becode-text-muted)', whiteSpace: 'nowrap' }}>{row.phone || '–'}</span>
                       )}
                     </td>
                     <td style={{ padding: '0.75rem 0.6rem', textAlign: 'right' }}>
@@ -594,6 +743,7 @@ export default function EmployeesPage() {
             )}
           </tbody>
         </table>
+        </div>
       </section>
 
       <ConfirmModal
