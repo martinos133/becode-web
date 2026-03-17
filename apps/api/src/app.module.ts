@@ -3,7 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
-import { SupabaseApiAuthGuard } from './auth/guards/supabase-api-auth.guard';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -22,7 +22,7 @@ import { SupabaseApiAuthGuard } from './auth/guards/supabase-api-auth.guard';
   providers: [
     {
       provide: APP_GUARD,
-      useClass: SupabaseApiAuthGuard,
+      useClass: JwtAuthGuard,
     },
   ],
 })

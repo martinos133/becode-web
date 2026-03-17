@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { createClient } from '@/lib/supabase';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { env } from '@/lib/env';
 
 type EmployeeRow = {
   id: number;
@@ -47,26 +47,33 @@ export default function EmployeesPage() {
     loadEmployees();
   }, []);
 
+  function getToken(): string | null {
+    return typeof window !== 'undefined' ? sessionStorage.getItem(env.authTokenStorageKey) : null;
+  }
+
   async function loadEmployees() {
-    const supabase = createClient();
     setLoading(true);
-    const { data, error } = await supabase
-      .from('employees')
-      .select('id, first_name, last_name, email, phone, hourly_rate')
-      .order('id', { ascending: true });
-    if (error) {
-      console.error('Chyba pri načítaní zamestnancov:', error.message);
+    const token = getToken();
+    if (!token) {
+      setRows([]);
+      setLoading(false);
+      return;
+    }
+    const res = await fetch('/api/employees', { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      console.error('Chyba pri načítaní zamestnancov:', data?.error ?? res.statusText);
       setRows([]);
     } else {
       setRows(
-        (data ?? []).map((e: any) => ({
+        (data?.rows ?? []).map((e: any) => ({
           id: Number(e.id),
           first_name: e.first_name ?? '',
           last_name: e.last_name ?? '',
           email: e.email ?? '',
           phone: e.phone ?? '',
           hourly_rate: Number(e.hourly_rate ?? 0),
-        })),
+        }))
       );
     }
     setLoading(false);
@@ -88,21 +95,28 @@ export default function EmployeesPage() {
     setSavingNew(true);
     setNewError(null);
 
-    const supabase = createClient();
-    const { error } = await supabase.from('employees').insert({
-      first_name: newEmp.first_name.trim(),
-      last_name: newEmp.last_name.trim(),
-      email: newEmp.email.trim() || null,
-      phone: newEmp.phone.trim() || null,
-      hourly_rate: newEmp.hourly_rate || 0,
+    const token = getToken();
+    if (!token) {
+      setNewError('Nie ste prihlásený.');
+      setSavingNew(false);
+      return;
+    }
+    const res = await fetch('/api/employees', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        first_name: newEmp.first_name.trim(),
+        last_name: newEmp.last_name.trim(),
+        email: newEmp.email.trim() || null,
+        phone: newEmp.phone.trim() || null,
+        hourly_rate: newEmp.hourly_rate || 0,
+      }),
     });
-
-    if (error) {
-      console.error('Chyba pri ukladaní zamestnanca:', error.message);
-      const msg = error.message || '';
-      const isTableMissing = msg.includes('Could not find the table');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = data?.error ?? 'Nepodarilo sa uložiť zamestnanca.';
       setNewError(
-        isTableMissing ? (
+        msg.includes('does not exist') ? (
           <>
             Tabuľka <code>employees</code> neexistuje.{' '}
             <a href="/setup-db" style={{ color: 'var(--becode-primary)', textDecoration: 'underline' }}>
@@ -124,8 +138,12 @@ export default function EmployeesPage() {
   }
 
   async function deleteRow(id: number) {
-    const supabase = createClient();
-    await supabase.from('employees').delete().eq('id', id);
+    const token = getToken();
+    if (!token) return;
+    await fetch(`/api/employees?id=${encodeURIComponent(String(id))}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
   }
 
   function updateRow<K extends keyof EmployeeRow>(id: number, field: K, value: EmployeeRow[K]) {
@@ -151,20 +169,30 @@ export default function EmployeesPage() {
 
   async function saveRow(row: EmployeeRow) {
     setSavingId(row.id);
-    const supabase = createClient();
-    const { error } = await supabase.from('employees').upsert({
-      id: row.id,
-      first_name: row.first_name,
-      last_name: row.last_name,
-      email: row.email,
-      phone: row.phone,
-      hourly_rate: row.hourly_rate,
+    const token = getToken();
+    if (!token) {
+      setSavingId(null);
+      return;
+    }
+    const res = await fetch('/api/employees', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        id: row.id,
+        first_name: row.first_name,
+        last_name: row.last_name,
+        email: row.email,
+        phone: row.phone,
+        hourly_rate: row.hourly_rate,
+      }),
     });
     setSavingId(null);
     setEditingId(null);
     setEditingSnapshot(null);
-    if (error) console.error('Chyba pri ukladaní:', error.message);
-    else void loadEmployees();
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('Chyba pri ukladaní:', data?.error ?? res.statusText);
+    } else void loadEmployees();
   }
 
   function addRow() {

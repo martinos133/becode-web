@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
 import { env } from '@/lib/env';
 
 export default function LoginPage() {
@@ -17,38 +16,28 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { data, error: signError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const res = await fetch(env.authUrl('/auth/login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
       });
-      if (signError) {
-        setError(signError.message ?? 'Prihlásenie zlyhalo.');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.token) {
+        setError(data?.error ?? 'Prihlásenie zlyhalo.');
         setLoading(false);
         return;
       }
-      const token = data.session?.access_token;
-      if (!token) {
-        setError('Nepodarilo sa získať token.');
-        setLoading(false);
-        return;
-      }
-      const res = await fetch(`${env.apiUrl}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        setError('API neoverilo prihlásenie. Skontrolujte SUPABASE_JWT_SECRET.');
-        setLoading(false);
-        return;
-      }
-      sessionStorage.setItem('supabase_token', token);
+      sessionStorage.setItem(env.authTokenStorageKey, String(data.token));
       router.push('/projects');
       router.refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Chyba pri prihlásení.';
       if (msg === 'Failed to fetch') {
+        const isProd = typeof window !== 'undefined' && !window.location.hostname.includes('localhost');
         setError(
-          'Sieťová chyba. Skontrolujte: 1) či beží API (npm run dev:api, port 3001), 2) či NEXT_PUBLIC_API_URL je http://localhost:3001, 3) pripojenie na Supabase.'
+          isProd
+            ? 'Sieťová chyba. Skontrolujte env premenné (API URL) a pripojenie.'
+            : 'Sieťová chyba. Skontrolujte: 1) či beží dev server (npm run dev), 2) či beží API (PORT) a CORS.'
         );
       } else {
         setError(msg);

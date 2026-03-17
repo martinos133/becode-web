@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
 
 type Mode = 'request' | 'set' | 'success';
 type SuccessFrom = 'request' | 'set' | null;
@@ -18,21 +17,7 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const hashParams = typeof window !== 'undefined' ? window.location.hash : '';
-    const isRecovery = hashParams.includes('type=recovery');
-
-    if (isRecovery) {
-      const supabase = createClient();
-      const checkSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) setMode('set');
-      };
-      checkSession();
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-        if (event === 'PASSWORD_RECOVERY') setMode('set');
-      });
-      return () => subscription.unsubscribe();
-    }
+    // Obnovenie hesla e-mailom zatiaľ nie je implementované.
   }, []);
 
   async function handleRequestReset(e: React.FormEvent) {
@@ -40,21 +25,7 @@ export default function ResetPasswordPage() {
     setError(null);
     setLoading(true);
     try {
-      const supabase = createClient();
-      const redirectTo =
-        typeof window !== 'undefined'
-          ? `${window.location.origin}/reset-password`
-          : '';
-      const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo,
-      });
-      if (err) {
-        setError(err.message ?? 'Nepodarilo sa odoslať email.');
-        setLoading(false);
-        return;
-      }
-      setSuccessFrom('request');
-      setMode('success');
+      setError('Obnovenie hesla e-mailom zatiaľ nie je implementované.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Chyba pri odosielaní.');
     } finally {
@@ -75,16 +46,7 @@ export default function ResetPasswordPage() {
     }
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { error: err } = await supabase.auth.updateUser({ password });
-      if (err) {
-        setError(err.message ?? 'Nepodarilo sa zmeniť heslo.');
-        setLoading(false);
-        return;
-      }
-      setSuccessFrom('set');
-      setMode('success');
-      setTimeout(() => router.push('/login'), 2000);
+      setError('Nastavenie hesla cez recovery link nie je implementované.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Chyba pri zmene hesla.');
     } finally {
@@ -132,7 +94,7 @@ export default function ResetPasswordPage() {
         {mode === 'request' && (
           <form onSubmit={handleRequestReset}>
             <p style={{ marginBottom: '1rem', fontSize: '0.9rem', color: 'var(--becode-text-muted)' }}>
-              Zadajte e-mail a pošleme vám odkaz na obnovenie hesla.
+              Obnovenie hesla e-mailom nie je zatiaľ dostupné.
             </p>
             <label
               htmlFor="email"
@@ -176,7 +138,7 @@ export default function ResetPasswordPage() {
                 fontWeight: 600,
               }}
             >
-              {loading ? 'Odosielam…' : 'Odoslať odkaz'}
+              {loading ? '…' : 'Skúsiť'}
             </button>
           </form>
         )}

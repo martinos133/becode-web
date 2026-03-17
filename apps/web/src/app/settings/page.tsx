@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
 import { env } from '@/lib/env';
 
 type User = { id: string; email?: string; role: string };
@@ -26,12 +25,12 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const token =
-      typeof window !== 'undefined' ? sessionStorage.getItem('supabase_token') : null;
+      typeof window !== 'undefined' ? sessionStorage.getItem(env.authTokenStorageKey) : null;
     if (!token) {
       router.replace('/login');
       return;
     }
-    fetch(`${env.apiUrl}/auth/me`, {
+    fetch(env.authUrl('/auth/me'), {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
@@ -48,9 +47,7 @@ export default function SettingsPage() {
   }, [router]);
 
   async function handleLogout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    if (typeof window !== 'undefined') sessionStorage.removeItem('supabase_token');
+    if (typeof window !== 'undefined') sessionStorage.removeItem(env.authTokenStorageKey);
     router.replace('/login');
     router.refresh();
   }
@@ -68,10 +65,20 @@ export default function SettingsPage() {
     }
     setPasswordLoading(true);
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) {
-        setPasswordError(error.message ?? 'Nepodarilo sa zmeniť heslo.');
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem(env.authTokenStorageKey) : null;
+      if (!token) {
+        setPasswordError('Nie ste prihlásený.');
+        setPasswordLoading(false);
+        return;
+      }
+      const res = await fetch(env.authUrl('/auth/change-password'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ newPassword }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPasswordError(data?.error ?? 'Nepodarilo sa zmeniť heslo.');
         setPasswordLoading(false);
         return;
       }
@@ -100,13 +107,13 @@ export default function SettingsPage() {
     }
     setNewUserLoading(true);
     try {
-      const token = typeof window !== 'undefined' ? sessionStorage.getItem('supabase_token') : null;
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem(env.authTokenStorageKey) : null;
       if (!token) {
         setNewUserError('Nie ste prihlásený.');
         setNewUserLoading(false);
         return;
       }
-      const res = await fetch(`${env.apiUrl}/auth/create-user`, {
+      const res = await fetch(env.authUrl('/auth/create-user'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

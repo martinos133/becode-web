@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { createClient } from '@/lib/supabase';
+import { env } from '@/lib/env';
 
 type Employee = {
   id: number;
@@ -44,19 +44,18 @@ export default function StatsPage() {
   const [newHours, setNewHours] = useState<string>('');
 
   useEffect(() => {
-    const supabase = createClient();
     async function loadEmployees() {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('id, first_name, last_name, hourly_rate')
-        .order('last_name', { ascending: true });
-      if (error) {
-        console.error('Chyba pri načítaní zamestnancov:', error.message);
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem(env.authTokenStorageKey) : null;
+      if (!token) return;
+      const res = await fetch('/api/employees', { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error('Chyba pri načítaní zamestnancov:', json?.error ?? res.statusText);
         setEmployees([]);
         return;
       }
       const mapped: Employee[] =
-        data?.map((e: any) => ({
+        (json?.rows ?? []).map((e: any) => ({
           id: Number(e.id),
           first_name: e.first_name ?? '',
           last_name: e.last_name ?? '',
@@ -71,19 +70,18 @@ export default function StatsPage() {
   }, []);
 
   useEffect(() => {
-    const supabase = createClient();
     async function loadProjects() {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('id, project, project_date, amount_without_vat, cost, total_hours')
-        .order('id', { ascending: false });
-      if (error) {
-        console.error('Chyba pri načítaní projektov:', error.message);
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem(env.authTokenStorageKey) : null;
+      if (!token) return;
+      const res = await fetch('/api/projects', { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error('Chyba pri načítaní projektov:', json?.error ?? res.statusText);
         setProjects([]);
         return;
       }
       setProjects(
-        (data ?? []).map((p: any) => ({
+        (json?.projects ?? []).map((p: any) => ({
           id: Number(p.id),
           project: p.project ?? '',
           project_date: p.project_date ?? null,
@@ -98,7 +96,6 @@ export default function StatsPage() {
 
   useEffect(() => {
     if (!selectedEmployeeId) return;
-    const supabase = createClient();
     async function loadEntries() {
       setLoading(true);
       const days = Number(period);
@@ -108,20 +105,23 @@ export default function StatsPage() {
       const fromIso = from.toISOString().slice(0, 10);
       const toIso = to.toISOString().slice(0, 10);
 
-      const { data, error } = await supabase
-        .from('employee_time_entries')
-        .select('id, employee_id, project_id, worked_hours, work_date')
-        .eq('employee_id', selectedEmployeeId)
-        .gte('work_date', fromIso)
-        .lte('work_date', toIso)
-        .order('work_date', { ascending: true });
-
-      if (error) {
-        console.error('Chyba pri načítaní výkazov hodín:', error.message);
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem(env.authTokenStorageKey) : null;
+      if (!token) {
+        setEntries([]);
+        setLoading(false);
+        return;
+      }
+      const res = await fetch(
+        `/api/time-entries?employeeId=${encodeURIComponent(String(selectedEmployeeId))}&from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error('Chyba pri načítaní výkazov hodín:', json?.error ?? res.statusText);
         setEntries([]);
       } else {
         setEntries(
-          (data ?? []).map((e: any) => ({
+          (json?.rows ?? []).map((e: any) => ({
             id: Number(e.id),
             employee_id: Number(e.employee_id),
             project_id: e.project_id ? Number(e.project_id) : null,
@@ -158,16 +158,25 @@ export default function StatsPage() {
   async function handleAddEntry(e: React.FormEvent) {
     e.preventDefault();
     if (!newEmployeeId || !newDate || !newHours) return;
-    const supabase = createClient();
     setSaving(true);
-    const { error } = await supabase.from('employee_time_entries').insert({
-      employee_id: newEmployeeId,
-      project_id: newProjectId ? Number(newProjectId) : null,
-      worked_hours: Number(newHours),
-      work_date: newDate,
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem(env.authTokenStorageKey) : null;
+    if (!token) {
+      setSaving(false);
+      return;
+    }
+    const res = await fetch('/api/time-entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        employee_id: newEmployeeId,
+        project_id: newProjectId ? Number(newProjectId) : null,
+        worked_hours: Number(newHours),
+        work_date: newDate,
+      }),
     });
-    if (error) {
-      console.error('Chyba pri pridaní výkazu hodín:', error.message);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('Chyba pri pridaní výkazu hodín:', data?.error ?? res.statusText);
       setSaving(false);
       return;
     }
@@ -180,21 +189,19 @@ export default function StatsPage() {
       from.setDate(to.getDate() - days + 1);
       const fromIso = from.toISOString().slice(0, 10);
       const toIso = to.toISOString().slice(0, 10);
-      const { data } = await supabase
-        .from('employee_time_entries')
-        .select('id, employee_id, project_id, worked_hours, work_date')
-        .eq('employee_id', selectedEmployeeId)
-        .gte('work_date', fromIso)
-        .lte('work_date', toIso)
-        .order('work_date', { ascending: true });
+      const res2 = await fetch(
+        `/api/time-entries?employeeId=${encodeURIComponent(String(selectedEmployeeId))}&from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const json2 = await res2.json().catch(() => ({}));
       setEntries(
-        (data ?? []).map((e: any) => ({
+        (json2?.rows ?? []).map((e: any) => ({
           id: Number(e.id),
           employee_id: Number(e.employee_id),
           project_id: e.project_id ? Number(e.project_id) : null,
           worked_hours: Number(e.worked_hours ?? 0),
           work_date: e.work_date,
-        })),
+        }))
       );
     }
     setSaving(false);

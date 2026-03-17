@@ -4,18 +4,18 @@ import { PassportModule } from '@nestjs/passport';
 import { env } from '../config/env';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { SupabaseJwtStrategy } from './strategies/supabase-jwt.strategy';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
-    PassportModule.register({ defaultStrategy: 'supabase-jwt' }),
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
-      secret: env.supabaseJwtSecret,
+      secret: env.authJwtSecret,
       signOptions: { algorithm: 'HS256' },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, SupabaseJwtStrategy],
+  providers: [AuthService, JwtStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}

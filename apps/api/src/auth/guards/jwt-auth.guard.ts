@@ -4,7 +4,7 @@ import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 @Injectable()
-export class SupabaseAuthGuard extends AuthGuard('supabase-jwt') {
+export class JwtAuthGuard extends AuthGuard('jwt') {
   constructor(private reflector: Reflector) {
     super();
   }
@@ -18,3 +18,4 @@ export class SupabaseAuthGuard extends AuthGuard('supabase-jwt') {
     return super.canActivate(context);
   }
 }
+

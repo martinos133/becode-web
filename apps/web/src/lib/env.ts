@@ -8,15 +8,18 @@ function getEnv(key: string, fallback: string): string {
 }
 
 export const env = {
-  get supabaseUrl(): string {
-    return getEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://dzdmcfdynksghhwkwtft.supabase.co');
-  },
-
-  get supabaseAnonKey(): string {
-    return getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'sb_publishable_5Zn7c7ctkTg7NGnhWX6K7g_Rz787-QW');
-  },
-
   get apiUrl(): string {
-    return getEnv('NEXT_PUBLIC_API_URL', 'http://localhost:3001');
+    return getEnv('NEXT_PUBLIC_API_URL', '');
+  },
+
+  /** URL pre auth endpoint – ak apiUrl nie je nastavené, používa /api (Vercel) */
+  authUrl(path: string): string {
+    const base = this.apiUrl.trim();
+    return base ? `${base.replace(/\/$/, '')}${path}` : `/api${path}`;
+  },
+
+  /** Kľúč v sessionStorage pre JWT */
+  get authTokenStorageKey(): string {
+    return getEnv('NEXT_PUBLIC_AUTH_TOKEN_STORAGE_KEY', 'auth_token');
   },
 };

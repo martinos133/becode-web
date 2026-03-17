@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { createClient } from '@/lib/supabase';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { env } from '@/lib/env';
 
 /** Fixné kategórie – zisk sa delí rovnomerne /3 */
 const CATEGORIES = [
@@ -45,13 +45,12 @@ export default function ProjectsPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   useEffect(() => {
-    const supabase = createClient();
     async function loadEmployees() {
-      const { data } = await supabase
-        .from('employees')
-        .select('id, first_name, last_name, hourly_rate')
-        .order('first_name');
-      const opts: EmployeeOption[] = (data ?? []).map((e: any) => ({
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem(env.authTokenStorageKey) : null;
+      if (!token) return;
+      const res = await fetch('/api/employees', { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json().catch(() => ({}));
+      const opts: EmployeeOption[] = (json?.rows ?? []).map((e: any) => ({
         id: Number(e.id),
         label: [e.first_name, e.last_name].filter(Boolean).join(' ') || `Zamestnanec #${e.id}`,
         hourlyRate: Number(e.hourly_rate ?? 0),
@@ -62,39 +61,37 @@ export default function ProjectsPage() {
   }, []);
 
   useEffect(() => {
-    const supabase = createClient();
     async function load() {
       setLoading(true);
-      const { data: projectsData, error: projectsError } = await supabase
-        .from('projects')
-        .select('id, project, project_date, amount_without_vat, cost, manual_cost')
-        .order('id', { ascending: true });
-      if (projectsError) {
-        console.error('Chyba pri načítaní projektov z DB:', projectsError.message);
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem(env.authTokenStorageKey) : null;
+      if (!token) {
         setRows([]);
         setLoading(false);
         return;
       }
-      const projectIds = (projectsData ?? []).map((p: any) => Number(p.id));
-      let projectEmployeesByProject: Record<number, ProjectEmployee[]> = {};
-      if (projectIds.length > 0) {
-        const { data: peData } = await supabase
-          .from('project_employees')
-          .select('project_id, employee_id, worked_hours')
-          .in('project_id', projectIds);
-        (peData ?? []).forEach((pe: any) => {
-          const pid = Number(pe.project_id);
-          if (!projectEmployeesByProject[pid]) projectEmployeesByProject[pid] = [];
-          projectEmployeesByProject[pid].push({
-            employeeId: Number(pe.employee_id),
-            hours: Number(pe.worked_hours ?? 0),
-          });
-        });
+      const res = await fetch('/api/projects', { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error('Chyba pri načítaní projektov z DB:', json?.error ?? res.statusText);
+        setRows([]);
+        setLoading(false);
+        return;
       }
+      const projectsData = json?.projects ?? [];
+      const peData = json?.projectEmployees ?? [];
+      let projectEmployeesByProject: Record<number, ProjectEmployee[]> = {};
+      (peData ?? []).forEach((pe: any) => {
+        const pid = Number(pe.project_id);
+        if (!projectEmployeesByProject[pid]) projectEmployeesByProject[pid] = [];
+        projectEmployeesByProject[pid].push({
+          employeeId: Number(pe.employee_id),
+          hours: Number(pe.worked_hours ?? 0),
+        });
+      });
       const mapped: Row[] = (projectsData ?? []).map((r: any) => ({
         id: Number(r.id),
         project: r.project ?? '',
-        projectDate: r.project_date ? r.project_date.slice(0, 10) : '',
+        projectDate: r.project_date ? String(r.project_date).slice(0, 10) : '',
         amountWithoutVat: Number(r.amount_without_vat ?? 0),
         manualCost: Number(r.manual_cost ?? 0),
         projectEmployees: projectEmployeesByProject[Number(r.id)] ?? [],
@@ -131,35 +128,35 @@ export default function ProjectsPage() {
   }
 
   async function syncRowToDb(row: Row) {
-    const supabase = createClient();
-    const { error: projectError } = await supabase.from('projects').upsert({
-      id: row.id,
-      project: row.project,
-      project_date: row.projectDate || null,
-      amount_without_vat: row.amountWithoutVat,
-      cost: totalCost(row),
-      manual_cost: row.manualCost,
-      total_hours: totalHoursFromEmployees(row),
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem(env.authTokenStorageKey) : null;
+    if (!token) return;
+    const res = await fetch('/api/projects', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        id: row.id,
+        project: row.project,
+        project_date: row.projectDate || null,
+        amount_without_vat: row.amountWithoutVat,
+        cost: totalCost(row),
+        manual_cost: row.manualCost,
+        total_hours: totalHoursFromEmployees(row),
+        projectEmployees: row.projectEmployees,
+      }),
     });
-    if (projectError) {
-      console.error('Chyba pri ukladaní projektu do DB:', projectError.message);
-      return;
-    }
-    await supabase.from('project_employees').delete().eq('project_id', row.id);
-    if (row.projectEmployees.length > 0) {
-      await supabase.from('project_employees').insert(
-        row.projectEmployees.map((pe) => ({
-          project_id: row.id,
-          employee_id: pe.employeeId,
-          worked_hours: pe.hours,
-        }))
-      );
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('Chyba pri ukladaní projektu do DB:', data?.error ?? res.statusText);
     }
   }
 
   async function deleteRowFromDb(id: number) {
-    const supabase = createClient();
-    await supabase.from('projects').delete().eq('id', id);
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem(env.authTokenStorageKey) : null;
+    if (!token) return;
+    await fetch(`/api/projects?id=${encodeURIComponent(String(id))}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
   }
 
   function updateRow<T extends keyof Row>(id: number, field: T, value: Row[T]) {

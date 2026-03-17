@@ -23,25 +23,15 @@ export const env = {
     return [...new Set([...defaults, ...fromEnv])];
   },
 
-  get supabaseUrl(): string {
-    const v = process.env.SUPABASE_URL;
-    if (!v) throw new Error('SUPABASE_URL musí byť nastavený v .env');
+  get databaseUrl(): string {
+    const v = process.env.DATABASE_URL;
+    if (!v) throw new Error('DATABASE_URL musí byť nastavený v .env');
     return v;
   },
 
-  get supabaseAnonKey(): string {
-    const v = process.env.SUPABASE_ANON_KEY;
-    if (!v) throw new Error('SUPABASE_ANON_KEY musí byť nastavený v .env');
-    return v;
-  },
-
-  get supabaseServiceRoleKey(): string | undefined {
-    return process.env.SUPABASE_SERVICE_ROLE_KEY;
-  },
-
-  get supabaseJwtSecret(): string {
-    const v = process.env.SUPABASE_JWT_SECRET;
-    if (!v) throw new Error('SUPABASE_JWT_SECRET musí byť nastavený v .env');
+  get authJwtSecret(): string {
+    const v = process.env.AUTH_JWT_SECRET;
+    if (!v) throw new Error('AUTH_JWT_SECRET musí byť nastavený v .env');
     return v;
   },
 };

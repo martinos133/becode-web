@@ -71,3 +71,18 @@ npm run dev
 - `GET /auth/me` – vráti prihláseného používateľa (hlavička `Authorization: Bearer <access_token>`)
 
 Token získaš po `signInWithPassword` z Supabase na frontende a posielaš ho v požiadavkách na API.
+
+## Produkcia (Vercel)
+
+Všetko beží na Verceli – frontend aj auth API sú súčasťou Next.js.
+
+**Vercel nastavenie:** Root Directory = `apps/web`
+
+**Env premenné vo Verceli:**
+| Premenná | Popis |
+|----------|-------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Pre vytváranie používateľov (Admin → Nastavenia) |
+
+`NEXT_PUBLIC_API_URL` **nastavovať netreba** – auth API beží v rámci Next.js na `/api/auth/*`.
